@@ -12,14 +12,16 @@ app.use(express.json());
 
 async function initDB() {
   try {
-    await sql`CREATE TABLE IF NOT EXISTS transactions(
-      id SERIAL PRIMARY KEY,
-      user_id VARCHAR(255) NOT NULL,
-      title VARCHAR(255) NOT NULL,
-      amount DECIMAL(10,2) NOT NULL,
-      category VARCHAR(255) NOT NULL,
-      created_at DATE DEFAULT CURRENT_DATE
-    )`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        category VARCHAR(255) NOT NULL,
+        created_at DATE DEFAULT CURRENT_DATE
+      )
+    `;
 
     // DECIMAL(10,2) means max = 99999999.99
     console.log("Database initialized successfully");
@@ -50,8 +52,8 @@ app.delete("/api/transaction/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    if(isNaN(parseInt(id))){
-        return res.status(400).json({message:"Invalid transaction ID"})
+    if (isNaN(parseInt(id))) {
+      return res.status(400).json({ message: "Invalid transaction ID" });
     }
 
     const result = await sql`
@@ -70,7 +72,6 @@ app.delete("/api/transaction/:id", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
 
 app.post("/api/transactions", async (req, res) => {
   try {
@@ -91,6 +92,41 @@ app.post("/api/transactions", async (req, res) => {
   } catch (error) {
     console.log("Error creating the transaction", error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+app.get("/api/transactions/summary/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const balanceResult = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS balance 
+      FROM transactions 
+      WHERE user_id = ${userId}
+    `;
+
+    const incomeResult = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS income
+      FROM transactions
+      WHERE user_id = ${userId} AND amount > 0
+    `;
+
+    const expensesResult = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS expenses
+      FROM transactions
+      WHERE user_id = ${userId} AND amount < 0
+    `;
+
+    res.status(200).json({
+      balance: balanceResult[0].balance,
+      income: incomeResult[0].income,
+      expenses: expensesResult[0].expenses // 🛑 Fixed typo: `expensesResult[0].expensesResult` → correct
+    });
+
+    // income is always +ve as well as expense is always -ve so based on (amount > 0) we can apply commonsense to get what it is...
+  } catch (error) {
+    console.log("Error getting the summary", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
