@@ -7,6 +7,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// built-in middleware
+app.use(express.json());
+
 async function initDB() {
   try {
     await sql`CREATE TABLE IF NOT EXISTS transactions(
@@ -18,12 +21,7 @@ async function initDB() {
       created_at DATE DEFAULT CURRENT_DATE
     )`;
 
-    //     -- DECIMAL(10,2)
-    // -- means: a fixed-point number with:
-    // --   10 digits total
-    // --   2 digits after the decimal point
-    // -- so: the max value it can store is 99999999.99 (8 digits before the decimal, 2 after)
-
+    // DECIMAL(10,2) means max = 99999999.99
     console.log("Database initialized successfully");
   } catch (error) {
     console.log("Error initializing DB", error);
@@ -31,13 +29,34 @@ async function initDB() {
   }
 }
 
+app.post("/api/transactions", async (req, res) => {
+  try {
+    const { title, amount, category, user_id } = req.body;
+
+    if (!title || !user_id || !category || amount === undefined) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const transaction = await sql`
+      INSERT INTO transactions (user_id, title, amount, category)
+      VALUES (${user_id}, ${title}, ${amount}, ${category})
+      RETURNING *
+    `;
+
+    console.log(transaction);
+    res.status(201).json(transaction[0]);
+  } catch (error) {
+    console.log("Error creating the transaction", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("It's working");
 });
 
 console.log("my port:", process.env.PORT);
 
-// Fixed `then()` callback syntax
 initDB().then(() => {
   app.listen(PORT, () => {
     console.log("Server is up and running on PORT:", PORT);
