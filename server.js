@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import { sql } from "./config/db.js"; 
+import { sql } from "./config/db.js";
 
 dotenv.config();
 
@@ -17,6 +17,12 @@ async function initDB() {
       category VARCHAR(255) NOT NULL,
       created_at DATE DEFAULT CURRENT_DATE
     )`;
+
+    //     -- DECIMAL(10,2)
+    // -- means: a fixed-point number with:
+    // --   10 digits total
+    // --   2 digits after the decimal point
+    // -- so: the max value it can store is 99999999.99 (8 digits before the decimal, 2 after)
 
     console.log("Database initialized successfully");
   } catch (error) {
