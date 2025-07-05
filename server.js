@@ -1,12 +1,15 @@
 import express from "express";
 import dotenv from "dotenv";
 import { sql } from "./config/db.js";
+import rateLimiter from "./middleware/rateLimiter.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+//made middleware
+app.use(rateLimiter);
 // built-in middleware
 app.use(express.json());
 
